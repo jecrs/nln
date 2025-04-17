@@ -1,119 +1,75 @@
+class Element:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+        self.childs = []
+        self.parent = None
+        self.parlist = []
+        self.hyearchy_lvl = -1
+
 def parse(content):
-    
     lmnts = {}
     plmnts = []
-    
-    parseplmnt = lambda line: Element(line[:line.find(":")],line[line.find(":")+1:]) if line.count(":") > 0 else None
-    
-    # this class is used to describe the element in the HDoE
-    class Element():
 
-        name = "" # the name of the objet
-        childs = [] # its childs
-        parent = None # its parent
-        parlist = [] # this is the path to it location. this is done when the HDoE is builded
-        hyearchy_lvl = -1 # the hyearchy level of this element, It's used to build an Hyearchy
-        value = "" # the Element value
-        
-        def __init__(self,name,value):
-            
-            self.name = name
-            self.value = value
-            
-    # loop that parses the elements
+    def parseplmnt(line):
+        if ":" in line:
+            name, value = line.split(":", 1)
+            return Element(name.strip(), value.strip())
+        return None
+
     for l in content.splitlines():
-        
-        hl = -1
-        lmnt = None
-        
-        if l.startswith("-"):
-            
-            hl = 0
-            
-            while l[hl] == "-":
-                
-                hl += 1
-                
-            lmnt = parseplmnt(l[hl:])
-            for o in plmnts:
-                print(lmnt.name,hl,o.hyearchy_lvl,o.name)
-                if o.hyearchy_lvl == hl-1:
-
-                    lmnt.hyearchy_lvl = hl
-                    lmnt.parent = plmnts.index(o)
-                    plmnts[plmnts.index(o)].childs.append(len(plmnts))
-                    
-            if lmnt.parent == None:
-                
-                print("no parent")
-                plmnts[len(plmnts)-1].hyearchy_lvl = hl
-                lmnt.parent = len(plmnts)-1
-                
-        else:
-            
-            lmnt = parseplmnt(l)
-            lmnt.hyearchy_lvl = 0
-                
-        plmnts.append(lmnt)
-        
-    plmntt = []
-    
-    # loop that build the HDoE
-    for l in plmnts:
-        
-        if l == None:
-            
+        l = l.strip()
+        if not l:
             continue
-        
-        if l.parent == None:
-            
-            plmntt.append(l)
-            plmnts[plmnts.index(l)].parent = None
-            
-        else:
-            
-            if l.parent != -1:
-                
-                par = []
-                lll = plmnts[l.parent]
-                
-                while lll != None and lll.parent != None:
-                    
-                    par.append(lll.name)
-                    lll = plmnts[lll.parent]
-                    
-                par.reverse()
-                plmnts[plmnts.index(l)].parlist = par
-                
-        plmntt.append(l)
-    
-    # build the dict based on the HDoE
 
-    for l in plmntt:
-        
-            loc = lmnts
-            
-            for k in l.parlist:
-                
-                loc = loc[k]
-                
-            loc[l.name] = {"_val":l.value}
+        hl = 0
+        while hl < len(l) and l[hl] == "-":
+            hl += 1
 
-    # since the HDoE isn't organized in a way that i can know if a element have or no childs this loops fix this
-    # Example of what the loop does: "Hello":{"_val":"World"} -> "Hello":"World"
+        clean_line = l[hl:].strip() if hl > 0 else l.strip()
+        lmnt = parseplmnt(clean_line)
 
-    for l in plmntt:
-        
-            loc = lmnts
-            
-            for k in l.parlist:
-                
-                loc = loc[k]
-            if type(loc[l.name]) == dict:
-                
-                if len(list(loc[l.name].keys())) == 1:
+        if lmnt is None:
+            continue
 
-                    loc[l.name] = loc[l.name]["_val"]
-                    
-            
+        lmnt.hyearchy_lvl = hl
+
+        if hl > 0:
+            for o in reversed(plmnts):
+                if o.hyearchy_lvl == hl - 1:
+                    lmnt.parent = plmnts.index(o)
+                    o.childs.append(len(plmnts))
+                    break
+
+        plmnts.append(lmnt)
+
+    for l in plmnts:
+        if l.parent is not None:
+            par = []
+            current = plmnts[l.parent]
+            while current:
+                par.append(current.name)
+                if current.parent is not None:
+                    current = plmnts[current.parent]
+                else:
+                    break
+            l.parlist = list(reversed(par))
+
+    for l in plmnts:
+        if l is None:
+            continue
+        loc = lmnts
+        for k in l.parlist:
+            loc = loc.setdefault(k, {})
+        loc[l.name] = {"_val": l.value}
+
+    def simplify(d):
+        for k in list(d.keys()):
+            if isinstance(d[k], dict):
+                if list(d[k].keys()) == ["_val"]:
+                    d[k] = d[k]["_val"]
+                else:
+                    simplify(d[k])
+    simplify(lmnts)
+
     return lmnts
