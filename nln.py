@@ -9,7 +9,7 @@ class Element:
 
 def parse(content):
     lmnts = {}
-    plmnts = []
+    plmnts:list[Element] = []
 
     def parseplmnt(line):
         if ":" in line:
@@ -61,15 +61,10 @@ def parse(content):
         loc = lmnts
         for k in l.parlist:
             loc = loc.setdefault(k, {})
+        
+        if l.childs == []:
+            loc[l.name] = l.value
+            continue
         loc[l.name] = {"_val": l.value}
-
-    def simplify(d):
-        for k in list(d.keys()):
-            if isinstance(d[k], dict):
-                if list(d[k].keys()) == ["_val"]:
-                    d[k] = d[k]["_val"]
-                else:
-                    simplify(d[k])
-    simplify(lmnts)
 
     return lmnts
